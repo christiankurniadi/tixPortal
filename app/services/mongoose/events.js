@@ -3,7 +3,6 @@ const { BadRequestError, NotFoundError } = require("../../errors")
 const { checkImageExistence } = require("./images")
 const { checkCategoryExistence } = require("./categories")
 const { checkTalentExistence } = require("./talents")
-const mongoose = require("mongoose")
 
 // Function to create a new Event
 const createEvent = async (req) => {
@@ -48,12 +47,14 @@ const createEvent = async (req) => {
 
 // Function to get all categories
 const getAllEvents = async (req) => {
-  const { keyword, status, date, category } = req.query
+  const { keyword, status, date, category, talents } = req.query
   let condition = {}
   if (keyword) {
     condition = { ...condition, title: { $regex: keyword, $options: "i" } }
   } else if (status) {
     condition = { ...condition, status: { $regex: status, $options: "i" } }
+  } else if (talents) {
+    condition = { ...condition, talents: { $regex: talents, $options: "i" } }
   } else if (date) {
     condition = { ...condition, date: date }
   }
@@ -78,43 +79,77 @@ const getAllEvents = async (req) => {
 }
 
 // Function to find Event by id
-// const getOneEvent = async (req) => {
-//   const { id } = req.params
-//   const result = await Events.findOne({ _id: id })
+const getOneEvent = async (req) => {
+  const { id } = req.params
+  const result = await Events.findOne({ _id: id })
 
-//   if (!result) throw new NotFoundError(`Event with ID ${id} not found.`)
+  if (!result) throw new NotFoundError(`Event with ID ${id} not found.`)
 
-//   return result
-// }
+  return result
+}
 
 // Function to update Event
-// const updateEvent = async (req) => {
-//   const { id } = req.params
-//   const { name, image } = req.body
-//   const isEventExist = await Events.findById(id)
+const updateEvent = async (req) => {
+  const { id } = req.params
+  const {
+    title,
+    date,
+    description,
+    venueName,
+    location,
+    duration,
+    status,
+    ageRestrictions,
+    tickets,
+    image,
+    category,
+    talents,
+  } = req.body
+  const isEventExist = await Events.findById(id)
 
-//   if (!isEventExist) throw new NotFoundError(`Event with ID ${id} not found.`)
+  if (!isEventExist) throw new NotFoundError(`Event with ID ${id} not found.`)
 
-//   const result = await Events.findByIdAndUpdate(
-//     id,
-//     { name, image },
-//     { new: true, runValidators: true }
-//   )
+  const isEventNameDuplicate = await Events.findOne({
+    title,
+    _id: { $ne: id },
+  })
 
-//   return result
-// }
+  if (isEventNameDuplicate)
+    throw new BadRequestError(`An event named ${title} already exists`)
+
+  const result = await Events.findByIdAndUpdate(
+    id,
+    {
+      title,
+      date,
+      description,
+      venueName,
+      location,
+      duration,
+      status,
+      ageRestrictions,
+      tickets,
+      image,
+      category,
+      talents,
+    },
+    { new: true, runValidators: true }
+  )
+
+  return result
+}
 
 // Function to delete Event
-// const deleteEvent = async (req) => {
-//   const { id } = req.params
-//   const isEventExist = await Events.findById(id)
+const deleteEvent = async (req) => {
+  const { id } = req.params
+  const isEventExist = await Events.findById(id)
 
-//   if (!isEventExist) throw new NotFoundError(`Event with ID ${id} not found.`)
+  if (!isEventExist) throw new NotFoundError(`Event with ID ${id} not found.`)
 
-//   const result = await Events.findByIdAndRemove(id)
+  const result = await Events.findByIdAndRemove(id)
 
-//   return result
-// }
+  return result
+}
 
 // const checkEventExistence = async (id) => {
 //   const result = await Events.findOne({ _id: id })
@@ -126,8 +161,8 @@ const getAllEvents = async (req) => {
 module.exports = {
   getAllEvents,
   createEvent,
-  //   getOneEvent,
-  //   updateEvent,
-  //   deleteEvent,
+  getOneEvent,
+  updateEvent,
+  deleteEvent,
   //   checkEventExistence,
 }
